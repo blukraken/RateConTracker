@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import pdfplumber
-import os
 from datetime import datetime
 from io import BytesIO
 import re
@@ -40,45 +39,72 @@ class Config:
 
 config = Config()
 
-# --- Streamlit Page Setup and Custom Styling ---
+# --- Streamlit Page Setup ---
 st.set_page_config(
     page_title="RateCon Tracker", layout="wide", initial_sidebar_state="expanded"
 )
 
-# --- AGGRESSIVE RESTYLE "CYBERSPACE GREEN" THEME ---
+# --- Adaptive Light/Dark Mode CSS Styling ---
 st.markdown(
     """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
-    /* --- Main Colors & Fonts --- */
+    /* --- THEME VARIABLES --- */
+    :root {
+        /* Light Mode (Default) */
+        --app-bg: #f0f2f6;
+        --app-text: #31333F;
+        --card-bg: #ffffff;
+        --card-border: #e6eaf1;
+        --heading-text: #09090b;
+        --subtle-text: #626773;
+        --accent-color: #008374; /* A more standard green */
+        --accent-text: #ffffff;
+        --danger-color: #d94444;
+        --plotly-template: 'plotly_white';
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            /* Dark Mode Overrides */
+            --app-bg: #020617;
+            --app-text: #e2e8f0;
+            --card-bg: #0f172a;
+            --card-border: #1e293b;
+            --heading-text: #f8fafc;
+            --subtle-text: #94a3b8;
+            --accent-color: #00f5d4;
+            --accent-text: #020617;
+            --danger-color: #ef4444;
+            --plotly-template: 'plotly_dark';
+        }
+    }
+
+    /* --- General App Styling --- */
     .main { 
-        background-color: #020617; /* slate-950 */
-        color: #e2e8f0; /* slate-200 */
+        background-color: var(--app-bg);
+        color: var(--app-text);
         font-family: 'Inter', sans-serif; 
     }
-    h1 { 
-        color: #f8fafc; /* slate-50 */
-        font-weight: 700; 
-    }
-    h2, h3 { 
-        color: #f8fafc; /* slate-50 */
+    h1, h2, h3 { 
+        color: var(--heading-text);
         font-weight: 600; 
     }
     
     /* --- Custom "Card" Container Styling --- */
     [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
-        background-color: #0f172a; /* slate-900 */
-        border: 1px solid #1e293b; /* slate-800 */
+        background-color: var(--card-bg);
+        border: 1px solid var(--card-border);
         border-radius: 12px;
         padding: 2rem;
         margin-bottom: 2rem;
     }
 
-    /* --- Custom Tab Navigation Styling --- */
+    /* --- Tab Navigation Styling --- */
     .stButton>button {
         background-color: transparent;
-        color: #94a3b8; /* slate-400 */
+        color: var(--subtle-text);
         border: 1px solid transparent;
         border-radius: 8px;
         padding: 0.6rem 1.2rem;
@@ -87,50 +113,41 @@ st.markdown(
         transition: color 0.2s, background-color 0.2s;
     }
     .stButton>button:hover {
-        background-color: #1e293b; /* slate-800 */
-        color: #f8fafc; /* slate-50 */
+        background-color: var(--card-border);
+        color: var(--heading-text);
         transform: none;
-        border: 1px solid #334155;
+        border: 1px solid var(--card-border);
     }
     .stButton>button:disabled { 
         background-color: transparent; 
-        color: #475569; /* slate-600 */
+        color: #475569;
     }
 
     /* --- Action Button Styling --- */
-    .stButton>button.primary_action { 
-        background-color: #00f5d4; /* Vibrant Green */
-        color: #020617; /* Dark text for contrast */
+    .stButton>button[type="submit"] { /* For primary buttons */
+        background-color: var(--accent-color);
+        color: var(--accent-text);
         font-weight: 700;
         border: none; 
     }
-    .stButton>button.primary_action:hover { 
-        background-color: #00d9bc; 
-        transform: scale(1.02); 
-    }
-    .stButton>button.danger_action { 
-        background-color: #ef4444; /* red-500 */
-        color: #f8fafc; 
-        border: none; 
-    }
-    .stButton>button.danger_action:hover { 
-        background-color: #dc2626; /* red-600 */
+    .stButton>button[type="submit"]:hover { 
+        filter: brightness(1.1);
         transform: scale(1.02); 
     }
     
-    /* --- Custom Metric Styling (inside cards) --- */
+    /* --- Metric Styling --- */
     .metric-container {
         display: flex;
         flex-direction: column;
     }
     .metric-label {
         font-size: 0.9rem;
-        color: #94a3b8; /* slate-400 */
+        color: var(--subtle-text);
     }
     .metric-value {
         font-size: 2rem;
         font-weight: 600;
-        color: #f8fafc; /* slate-50 */
+        color: var(--heading-text);
     }
 </style>
 """,
@@ -138,7 +155,7 @@ st.markdown(
 )
 
 
-# --- Core Data Functions (No changes) ---
+# --- Core Data Functions ---
 @st.cache_resource
 def connect_to_sheet():
     try:
@@ -194,7 +211,7 @@ def append_to_sheet(new_records_df):
         st.error(f"Failed to append to Google Sheet: {e}")
 
 
-# --- Other Functions (No changes) ---
+# --- Helper Functions ---
 def extract_data_from_pdf(pdf_bytes):
     try:
         with pdfplumber.open(BytesIO(pdf_bytes)) as pdf:
@@ -285,6 +302,7 @@ def convert_df_to_excel(df):
 # --- UI Rendering Functions ---
 def render_metrics(df):
     if df.empty:
+        st.info("No data available to display metrics.")
         return
     df_proc = process_dataframe(df)
     total_loads, total_revenue = len(df_proc), df_proc["Parsed Rate"].sum()
@@ -314,7 +332,8 @@ def render_metrics(df):
         metric_display("Total Revenue", f"${total_revenue:,.2f}")
     with cols1[2]:
         metric_display("Average Rate / Load", f"${avg_rate_per_load:,.2f}")
-    st.markdown("<br>", unsafe_allow_html=True)  # Spacer
+    
+    st.markdown("<br>", unsafe_allow_html=True)
     st.subheader("Revenue Breakdown")
     cols2 = st.columns(3)
     with cols2[0]:
@@ -327,7 +346,8 @@ def render_metrics(df):
             f"${mismatched_revenue:,.2f}",
             "Revenue from loads where rate != Drayage + Chassis model.",
         )
-    st.markdown("<br>", unsafe_allow_html=True)  # Spacer
+
+    st.markdown("<br>", unsafe_allow_html=True)
     st.subheader("Operational & Quality Statistics")
     cols3 = st.columns(3)
     with cols3[0]:
@@ -345,7 +365,12 @@ def render_metrics(df):
 def render_charts(df):
     if df.empty:
         return
-    df_proc, accent_color = process_dataframe(df), "#00f5d4"
+    df_proc = process_dataframe(df)
+    
+    # Get the current theme for plotly
+    plotly_template = "plotly_dark" if "dark" in st.get_option("theme.base") else "plotly_white"
+    accent_color = "#00f5d4" if "dark" in st.get_option("theme.base") else "#008374"
+
     col1, col2 = st.columns(2)
     with col1:
         chassis_dist = df_proc["Chassis Count"].value_counts().sort_index()
@@ -355,7 +380,7 @@ def render_charts(df):
                 title="Loads by Chassis Count",
                 labels={"index": "Chassis Count", "value": "Number of Loads"},
                 color_discrete_sequence=[accent_color],
-                template="plotly_dark",
+                template=plotly_template,
             )
             st.plotly_chart(fig, use_container_width=True)
     with col2:
@@ -366,7 +391,7 @@ def render_charts(df):
                 title="Top 10 Loads by Equipment Type",
                 labels={"index": "Equipment Type", "value": "Number of Loads"},
                 color_discrete_sequence=[accent_color],
-                template="plotly_dark",
+                template=plotly_template,
             )
             st.plotly_chart(fig, use_container_width=True)
 
@@ -405,18 +430,21 @@ def render_data_table(df):
 
 
 # --- Callback Functions ---
-def run_file_processing(uploaded_files, existing_df):
+def run_file_processing(uploaded_files):
+    if not uploaded_files:
+        st.warning("Please upload files before processing.")
+        return
+        
+    existing_df = load_log()
     new_records, skipped_files = [], []
     existing_refs, existing_files = (
-        (
-            set(existing_df["Reference #"].astype(str)),
-            set(existing_df["File"].astype(str)),
-        )
-        if not existing_df.empty
-        else (set(), set())
-    )
+        set(existing_df["Reference #"].astype(str)),
+        set(existing_df["File"].astype(str)),
+    ) if not existing_df.empty else (set(), set())
+
     progress_bar_placeholder = st.empty()
     progress_bar = progress_bar_placeholder.progress(0, text="Initializing...")
+    
     for i, file in enumerate(uploaded_files):
         progress_bar.progress(
             (i + 1) / len(uploaded_files), text=f"Processing: {file.name}"
@@ -447,12 +475,11 @@ def run_file_processing(uploaded_files, existing_df):
             }
         )
         existing_refs.add(ref)
+    
     progress_bar_placeholder.empty()
-    (
-        st.session_state.processed_records,
-        st.session_state.skipped_files,
-        st.session_state.processing_complete,
-    ) = (new_records, skipped_files, True)
+    st.session_state.processed_records = new_records
+    st.session_state.skipped_files = skipped_files
+    st.session_state.processing_complete = True
     st.session_state.needs_rerun = True
 
 
@@ -460,230 +487,7 @@ def run_save_records():
     new_records = st.session_state.get("processed_records", [])
     if new_records:
         append_to_sheet(pd.DataFrame(new_records))
-        st.success(f"✅ Added {len(new_records)} new records.")
-        (
-            st.session_state.processed_records,
-            st.session_state.skipped_files,
-            st.session_state.processing_complete,
-        ) = (None, None, False)
-        st.session_state.uploaded_files_key += 1
-        st.session_state.needs_rerun = True
-
-
-def run_delete_selected(refs_to_delete):
-    if refs_to_delete:
-        update_sheet(load_log()[~load_log()["Reference #"].isin(refs_to_delete)])
-        st.success(f"Deleted {len(refs_to_delete)} records.")
-        st.session_state.needs_rerun = True
-
-
-def run_delete_all():
-    update_sheet(pd.DataFrame(columns=config.COLUMNS))
-    st.success("All records deleted.")
-    st.session_state.show_delete_all_confirm = False
-    st.session_state.needs_rerun = True
-
-
-def set_active_tab(tab_id):
-    st.query_params["tab"] = tab_id
-    st.session_state.needs_rerun = True
-
-
-# --- Main Application Logic ---
-def main():
-    st.title("RateCon Tracker")
-    for key in [
-        "processing_complete",
-        "processed_records",
-        "skipped_files",
-        "show_delete_all_confirm",
-        "needs_rerun",
-        "uploaded_files_key",
-    ]:
-        if key not in st.session_state:
-            st.session_state[key] = 0 if key == "uploaded_files_key" else False
-    if st.session_state.get("needs_rerun", False):
-        st.session_state.needs_rerun = False
-        st.rerun()
-
-    if "tab" not in st.query_params:
-        st.query_params["tab"] = "upload"
-    active_tab = st.query_params["tab"]
-
-    tabs, cols = {
-        "upload": "📁 Upload",
-        "dashboard": "📊 Dashboard",
-        "manage": "⚙️ Manage Data",
-    }, st.columns(3)
-    for i, (tab_id, tab_name) in enumerate(tabs.items()):
-        with cols[i]:
-            st.button(
-                tab_name,
-                key=f"tab_{tab_id}",
-                on_click=set_active_tab,
-                args=(tab_id,),
-                use_container_width=True,
-            )
-
-    active_button_id = st.session_state.get(f"tab_{active_tab}")
-    if active_button_id:
-        st.markdown(
-            f"<style>#{active_button_id} button {{ background-color: #0f172a; color: #f8fafc; border: 1px solid #1e293b; }}</style>",
-            unsafe_allow_html=True,
-        )
-
-    df = load_log()
-
-    # --- Card-based Layout ---
-    with st.container():
-        if active_tab == "upload":
-            with st.container():  # Using st.container to apply card style via CSS selector
-                st.header("Upload RateCon PDFs")
-                uploaded_files = st.file_uploader(
-                    "Drag and drop PDF files here",
-                    type="pdf",
-                    accept_multiple_files=True,
-                    key=f"uploader_{st.session_state.uploaded_files_key}",
-                    on_change=lambda: st.session_state.update(
-                        processing_complete=False,
-                        processed_records=None,
-                        skipped_files=None,
-                    ),
-                )
-                if uploaded_files:
-                    c1, c2, _ = st.columns([1.5, 2.5, 3])
-                    with c1:
-                        st.button(
-                            "⚙️ Process",
-                            on_click=run_file_processing,
-                            args=(uploaded_files, df),
-                            disabled=st.session_state.processing_complete,
-                            use_container_width=True,
-                            key="process_btn",
-                        )
-                    with c2:
-                        if (
-                            st.session_state.processing_complete
-                            and st.session_state.processed_records
-                        ):
-                            st.button(
-                                "💾 Save Records",
-                                on_click=run_save_records,
-                                use_container_width=True,
-                                key="save_btn",
-                            )
-
-                st.markdown(
-                    """<script>
-                    const buttons = window.parent.document.querySelectorAll('.stButton button');
-                    buttons.forEach(btn => {
-                        if (btn.innerText === '⚙️ Process' || btn.innerText === '💾 Save Records') {
-                            btn.classList.add('primary_action');
-                        }
-                    });
-                </script>""",
-                    unsafe_allow_html=True,
-                )
-
-        if st.session_state.processing_complete:
-            with st.container():
-                st.header("Processing Complete")
-                if st.session_state.skipped_files:
-                    st.subheader(
-                        f"⚠️ Skipped {len(st.session_state.skipped_files)} Files"
-                    )
-                    with st.expander("View details", expanded=True):
-                        for item in st.session_state.skipped_files:
-                            st.warning(f"**{item['file']}**: {item['reason']}")
-                if st.session_state.processed_records:
-                    st.subheader(
-                        f"✅ Found {len(st.session_state.processed_records)} New Records"
-                    )
-                    st.dataframe(
-                        pd.DataFrame(st.session_state.processed_records),
-                        use_container_width=True,
-                    )
-                else:
-                    st.info("No new, valid records found.")
-
-        elif active_tab == "dashboard":
-            if df.empty:
-                with st.container():
-                    st.info("No data available.")
-            else:
-                with st.container():
-                    render_metrics(df)
-                with st.container():
-                    render_charts(df)
-                with st.container():
-                    st.subheader("RateCon Table")
-                    render_data_table(df)
-                with st.container():
-                    st.subheader("Export Data")
-                    c1, c2, _ = st.columns([1, 1, 4])
-                    with c1:
-                        export_format = st.selectbox(
-                            "Format", ["Excel", "CSV"], label_visibility="collapsed"
-                        )
-                    with c2:
-                        file_name_base, label, data, mime = (
-                            (
-                                f"ratecon_export_{datetime.now().strftime('%Y%m%d')}",
-                                "📥 Export to Excel",
-                                convert_df_to_excel(df),
-                                "application/vnd.ms-excel",
-                            )
-                            if export_format == "Excel"
-                            else (
-                                f"ratecon_export_{datetime.now().strftime('%Y%m%d')}",
-                                "📥 Export to CSV",
-                                convert_df_to_csv(df),
-                                "text/csv",
-                            )
-                        )
-                        file_name = f"{file_name_base}.{'xlsx' if export_format == 'Excel' else 'csv'}"
-                        st.download_button(
-                            label=label, data=data, file_name=file_name, mime=mime
-                        )
-
-        elif active_tab == "manage":
-            if df.empty:
-                with st.container():
-                    st.info("No records to manage.")
-            else:
-                with st.container():
-                    st.subheader("Delete Individual Records")
-                    refs_to_delete = st.multiselect(
-                        "Select by Reference #",
-                        df["Reference #"].dropna().unique().tolist(),
-                    )
-                    st.button(
-                        "Delete Selected",
-                        on_click=run_delete_selected,
-                        args=(refs_to_delete,),
-                        use_container_width=True,
-                    )
-                with st.container():
-                    st.subheader("🚨 Danger Zone")
-                    if st.button(
-                        "🗑️ Delete All Records",
-                        use_container_width=True,
-                        type="secondary",
-                    ):
-                        st.session_state.show_delete_all_confirm = True
-                    if st.session_state.show_delete_all_confirm:
-                        st.error("Are you sure? This action is permanent.")
-                        c1, c2, _ = st.columns([1.5, 1, 4])
-                        c1.button(
-                            "✅ Yes, Delete Everything",
-                            on_click=run_delete_all,
-                            type="secondary",
-                            use_container_width=True,
-                        )
-                        if c2.button("❌ Cancel", use_container_width=True):
-                            st.session_state.show_delete_all_confirm = False
-                            st.session_state.needs_rerun = True
-
-
-if __name__ == "__main__":
-    main()
+        st.toast(f"✅ Success! Added {len(new_records)} new records to the log.", icon="🎉")
+        
+        st.session_state.processing_complete = False
+        st.sess

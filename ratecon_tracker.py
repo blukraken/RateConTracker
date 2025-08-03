@@ -11,6 +11,7 @@ import gspread
 from gspread_dataframe import set_with_dataframe
 
 # --- Logging Configuration ---
+# This is a test change.
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -237,7 +238,7 @@ def render_metrics(df):
     cols1[0].metric("Total Loads", f"{total_loads:,}")
     cols1[1].metric("Total Revenue", f"${total_revenue:,.2f}")
     cols1[2].metric("Average Rate / Load", f"${avg_rate_per_load:,.2f}")
-    
+
     st.subheader("Revenue Breakdown")
     cols2 = st.columns(3)
     cols2[0].metric("Total Drayage Revenue", f"${drayage_revenue:,.2f}")
@@ -263,10 +264,12 @@ def render_charts(df):
     if df.empty:
         return
     df_proc = process_dataframe(df)
-    
+
     # Get the current theme for plotly
-    plotly_template = "plotly_dark" if st.get_option("theme.base") == "dark" else "plotly_white"
-    
+    plotly_template = (
+        "plotly_dark" if st.get_option("theme.base") == "dark" else "plotly_white"
+    )
+
     col1, col2 = st.columns(2)
     with col1:
         chassis_dist = df_proc["Chassis Count"].value_counts().sort_index()
@@ -298,7 +301,7 @@ def render_data_table(df):
     df_proc["Notes"] = df_proc.apply(
         lambda row: "⚠️ Rate Mismatch" if row["Mismatch"] else row["Notes"], axis=1
     )
-    
+
     display_cols = [
         "Date Added",
         "Customer",
@@ -326,17 +329,21 @@ def run_file_processing(uploaded_files):
     if not uploaded_files:
         st.warning("Please upload files before processing.")
         return
-        
+
     existing_df = load_log()
     new_records, skipped_files = [], []
     existing_refs, existing_files = (
-        set(existing_df["Reference #"].astype(str)),
-        set(existing_df["File"].astype(str)),
-    ) if not existing_df.empty else (set(), set())
+        (
+            set(existing_df["Reference #"].astype(str)),
+            set(existing_df["File"].astype(str)),
+        )
+        if not existing_df.empty
+        else (set(), set())
+    )
 
     progress_bar_placeholder = st.empty()
     progress_bar = progress_bar_placeholder.progress(0, text="Initializing...")
-    
+
     for i, file in enumerate(uploaded_files):
         progress_bar.progress(
             (i + 1) / len(uploaded_files), text=f"Processing: {file.name}"
@@ -367,7 +374,7 @@ def run_file_processing(uploaded_files):
             }
         )
         existing_refs.add(ref)
-    
+
     progress_bar_placeholder.empty()
     st.session_state.processed_records = new_records
     st.session_state.skipped_files = skipped_files
@@ -379,8 +386,10 @@ def run_save_records():
     new_records = st.session_state.get("processed_records", [])
     if new_records:
         append_to_sheet(pd.DataFrame(new_records))
-        st.toast(f"✅ Success! Added {len(new_records)} new records to the log.", icon="🎉")
-        
+        st.toast(
+            f"✅ Success! Added {len(new_records)} new records to the log.", icon="🎉"
+        )
+
         st.session_state.processing_complete = False
         st.session_state.processed_records = []
         st.session_state.skipped_files = []
@@ -412,7 +421,14 @@ def main():
     st.title("RateCon Tracker")
 
     # Initialize session state variables
-    for key in ["processing_complete", "processed_records", "skipped_files", "show_delete_all_confirm", "needs_rerun", "uploader_key"]:
+    for key in [
+        "processing_complete",
+        "processed_records",
+        "skipped_files",
+        "show_delete_all_confirm",
+        "needs_rerun",
+        "uploader_key",
+    ]:
         if key not in st.session_state:
             st.session_state[key] = 0 if key == "uploader_key" else False
 
@@ -445,13 +461,13 @@ def main():
     if active_tab == "upload":
         with st.container():
             st.header("Upload RateCon PDFs")
-            
+
             uploaded_files = st.file_uploader(
                 "Drag and drop PDF files here",
                 type="pdf",
                 accept_multiple_files=True,
                 key=f"file_uploader_{st.session_state.uploader_key}",
-                on_change=lambda: st.session_state.update(processing_complete=False)
+                on_change=lambda: st.session_state.update(processing_complete=False),
             )
 
             st.button(
@@ -460,29 +476,33 @@ def main():
                 args=(uploaded_files,),
                 disabled=st.session_state.processing_complete or not uploaded_files,
                 use_container_width=True,
-                type="primary"
+                type="primary",
             )
 
             if st.session_state.processing_complete:
                 st.header("Processing Complete")
-                
+
                 if st.session_state.processed_records:
                     st.button(
                         "💾 Save New Records to Log",
                         on_click=run_save_records,
                         use_container_width=True,
                         key="save_btn",
-                        type="primary"
+                        type="primary",
                     )
 
                 if st.session_state.skipped_files:
-                    st.subheader(f"⚠️ Skipped {len(st.session_state.skipped_files)} Files")
+                    st.subheader(
+                        f"⚠️ Skipped {len(st.session_state.skipped_files)} Files"
+                    )
                     with st.expander("View details", expanded=True):
                         for item in st.session_state.skipped_files:
                             st.warning(f"**{item['file']}**: {item['reason']}")
-                
+
                 if st.session_state.processed_records:
-                    st.subheader(f"✅ Found {len(st.session_state.processed_records)} New Records")
+                    st.subheader(
+                        f"✅ Found {len(st.session_state.processed_records)} New Records"
+                    )
                     st.dataframe(
                         pd.DataFrame(st.session_state.processed_records),
                         use_container_width=True,
@@ -507,14 +527,29 @@ def main():
                         "Format", ["Excel", "CSV"], label_visibility="collapsed"
                     )
                 with c2:
-                    file_name_base = f"ratecon_export_{datetime.now().strftime('%Y%m%d')}"
+                    file_name_base = (
+                        f"ratecon_export_{datetime.now().strftime('%Y%m%d')}"
+                    )
                     if export_format == "Excel":
-                        label, data, mime, ext = "📥 Export to Excel", convert_df_to_excel(df), "application/vnd.ms-excel", "xlsx"
+                        label, data, mime, ext = (
+                            "📥 Export to Excel",
+                            convert_df_to_excel(df),
+                            "application/vnd.ms-excel",
+                            "xlsx",
+                        )
                     else:
-                        label, data, mime, ext = "📥 Export to CSV", convert_df_to_csv(df), "text/csv", "csv"
-                    
+                        label, data, mime, ext = (
+                            "📥 Export to CSV",
+                            convert_df_to_csv(df),
+                            "text/csv",
+                            "csv",
+                        )
+
                     st.download_button(
-                        label=label, data=data, file_name=f"{file_name_base}.{ext}", mime=mime
+                        label=label,
+                        data=data,
+                        file_name=f"{file_name_base}.{ext}",
+                        mime=mime,
                     )
 
     elif active_tab == "manage":
@@ -533,20 +568,24 @@ def main():
                     on_click=run_delete_selected,
                     args=(refs_to_delete,),
                     use_container_width=True,
-                    disabled=not refs_to_delete
+                    disabled=not refs_to_delete,
                 )
             with st.container():
                 st.subheader("🚨 Danger Zone")
-                if st.button("🗑️ Delete All Records", use_container_width=True, type="secondary"):
+                if st.button(
+                    "🗑️ Delete All Records", use_container_width=True, type="secondary"
+                ):
                     st.session_state.show_delete_all_confirm = True
-                
+
                 if st.session_state.show_delete_all_confirm:
-                    st.error("Are you sure? This action is permanent and cannot be undone.")
+                    st.error(
+                        "Are you sure? This action is permanent and cannot be undone."
+                    )
                     c1, c2, _ = st.columns([1.5, 1, 4])
                     c1.button(
                         "✅ Yes, Delete Everything",
                         on_click=run_delete_all,
-                        type="primary"
+                        type="primary",
                     )
                     if c2.button("❌ Cancel"):
                         st.session_state.show_delete_all_confirm = False

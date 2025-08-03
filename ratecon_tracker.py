@@ -471,21 +471,21 @@ def run_save_records():
         st.session_state.skipped_files = []
         # This key change forces the file_uploader to reset
         st.session_state.uploader_key += 1
-        st.rerun()
+        st.session_state.needs_rerun = True
 
 
 def run_delete_selected(refs_to_delete):
     if refs_to_delete:
         update_sheet(load_log()[~load_log()["Reference #"].isin(refs_to_delete)])
         st.toast(f"Deleted {len(refs_to_delete)} records.", icon="🗑️")
-        st.rerun()
+        st.session_state.needs_rerun = True
 
 
 def run_delete_all():
     update_sheet(pd.DataFrame(columns=config.COLUMNS))
     st.toast("All records have been deleted.", icon="🚨")
     st.session_state.show_delete_all_confirm = False
-    st.rerun()
+    st.session_state.needs_rerun = True
 
 
 def set_active_tab(tab_id):
@@ -507,6 +507,13 @@ def main():
         st.session_state.show_delete_all_confirm = False
     if "uploader_key" not in st.session_state:
         st.session_state.uploader_key = 0
+    if "needs_rerun" not in st.session_state:
+        st.session_state.needs_rerun = False
+
+    # --- RERUN LOGIC ---
+    if st.session_state.needs_rerun:
+        st.session_state.needs_rerun = False
+        st.rerun()
 
     # Set active tab from URL query params
     active_tab = st.query_params.get("tab", "upload")
@@ -649,7 +656,7 @@ def main():
                     )
                     if c2.button("❌ Cancel"):
                         st.session_state.show_delete_all_confirm = False
-                        st.rerun()
+                        st.session_state.needs_rerun = True
 
 
 if __name__ == "__main__":

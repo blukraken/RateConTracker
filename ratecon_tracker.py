@@ -197,21 +197,35 @@ def process_dataframe(df):
     return df_proc
 
 
-# --- FEATURE CHANGE: Modified functions to include Chassis Count ---
 @st.cache_data
 def convert_df_to_csv(df):
-    # Process the dataframe to ensure Chassis Count is present
     df_to_export = process_dataframe(df)
     return df_to_export.to_csv(index=False).encode("utf-8")
 
 
 @st.cache_data
 def convert_df_to_excel(df):
-    # Process the dataframe to ensure Chassis Count is present
     df_to_export = process_dataframe(df)
     output = BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
         df_to_export.to_excel(writer, index=False, sheet_name="RateCons")
+
+        workbook = writer.book
+        worksheet = writer.sheets["RateCons"]
+
+        red_format = workbook.add_format(
+            {"bg_color": "#FFC7CE", "font_color": "#9C0006"}
+        )
+
+        try:
+            # Apply the format to rows where Mismatch is True
+            for row_num, is_mismatch in enumerate(df_to_export["Mismatch"]):
+                if is_mismatch:
+                    worksheet.set_row(row_num + 1, None, red_format)
+        except KeyError:
+            # If Mismatch column doesn't exist for some reason, do nothing.
+            pass
+
     return output.getvalue()
 
 
@@ -526,7 +540,6 @@ def main():
                     file_name_base = (
                         f"ratecon_export_{datetime.now().strftime('%Y%m%d')}"
                     )
-                    # --- FEATURE CHANGE: Pass the main dataframe `df` to the conversion functions ---
                     if export_format == "Excel":
                         label, data, mime, ext = (
                             "📥 Export to Excel",
@@ -574,16 +587,15 @@ def main():
                 ):
                     st.session_state.show_delete_all_confirm = True
 
-                if st.session_state.show_delete_all_confirm:
+                if st.session_state.get("show_delete_all_confirm", False):
                     st.error(
                         "Are you sure? This action is permanent and cannot be undone."
                     )
                     c1, c2, _ = st.columns([1.5, 1, 4])
-                    c1.button(
-                        "✅ Yes, Delete Everything",
-                        on_click=run_delete_all,
-                        type="primary",
-                    )
+
+                    if c1.button("✅ Yes, Delete Everything", type="primary"):
+                        run_delete_all()
+
                     if c2.button("❌ Cancel"):
                         st.session_state.show_delete_all_confirm = False
                         st.session_state.needs_rerun = True

@@ -115,29 +115,6 @@ def convert_df_to_excel(df):
 # --- Main Application ---
 def main():
     st.set_page_config(page_title="RateCon Tracker", layout="wide")
-
-    # --- START OF ADDED CODE ---
-    # This CSS block ensures the app is readable in both light and dark modes.
-    custom_css = """
-    <style>
-    /* Base styles for Light Mode (default) */
-    body {
-        background-color: #FFFFFF;
-        color: #000000; /* Black text */
-    }
-
-    /* Styles for users who prefer Dark Mode */
-    @media (prefers-color-scheme: dark) {
-        body {
-            background-color: #0d1117; /* A dark background color */
-            color: #c9d1d9;      /* A light text color */
-        }
-    }
-    </style>
-    """
-    st.markdown(custom_css, unsafe_allow_html=True)
-    # --- END OF ADDED CODE ---
-
     st.title("🚚 Rate Confirmation Tracker")
     st.write("A simple tool to manage your freight load rate confirmations.")
 

@@ -551,21 +551,22 @@ def main():
                     ),
                 )
                 if uploaded_files:
-                    c1, c2, _ = st.columns([1.5, 2.5, 3])
-                    with c1:
-                        st.button(
-                            "⚙️ Process",
-                            on_click=run_file_processing,
-                            args=(uploaded_files, df),
-                            disabled=st.session_state.processing_complete,
-                            use_container_width=True,
-                            key="process_btn",
-                        )
-                    with c2:
-                        if (
-                            st.session_state.processing_complete
-                            and st.session_state.processed_records
-                        ):
+                    st.button(
+                        "⚙️ Process",
+                        on_click=run_file_processing,
+                        args=(uploaded_files, df),
+                        disabled=st.session_state.processing_complete,
+                        use_container_width=True,
+                        key="process_btn",
+                    )
+                
+                # --- BUG FIX: Moved this section outside the "if uploaded_files" block ---
+                if st.session_state.processing_complete:
+                    with st.container():
+                        st.header("Processing Complete")
+                        
+                        # --- BUG FIX: Added Save button here ---
+                        if st.session_state.processed_records:
                             st.button(
                                 "💾 Save Records",
                                 on_click=run_save_records,
@@ -573,38 +574,24 @@ def main():
                                 key="save_btn",
                             )
 
-                st.markdown(
-                    """<script>
-                    const buttons = window.parent.document.querySelectorAll('.stButton button');
-                    buttons.forEach(btn => {
-                        if (btn.innerText === '⚙️ Process' || btn.innerText === '💾 Save Records') {
-                            btn.classList.add('primary_action');
-                        }
-                    });
-                </script>""",
-                    unsafe_allow_html=True,
-                )
-
-        if st.session_state.processing_complete:
-            with st.container():
-                st.header("Processing Complete")
-                if st.session_state.skipped_files:
-                    st.subheader(
-                        f"⚠️ Skipped {len(st.session_state.skipped_files)} Files"
-                    )
-                    with st.expander("View details", expanded=True):
-                        for item in st.session_state.skipped_files:
-                            st.warning(f"**{item['file']}**: {item['reason']}")
-                if st.session_state.processed_records:
-                    st.subheader(
-                        f"✅ Found {len(st.session_state.processed_records)} New Records"
-                    )
-                    st.dataframe(
-                        pd.DataFrame(st.session_state.processed_records),
-                        use_container_width=True,
-                    )
-                else:
-                    st.info("No new, valid records found.")
+                        if st.session_state.skipped_files:
+                            st.subheader(
+                                f"⚠️ Skipped {len(st.session_state.skipped_files)} Files"
+                            )
+                            with st.expander("View details", expanded=True):
+                                for item in st.session_state.skipped_files:
+                                    st.warning(f"**{item['file']}**: {item['reason']}")
+                        
+                        if st.session_state.processed_records:
+                            st.subheader(
+                                f"✅ Found {len(st.session_state.processed_records)} New Records"
+                            )
+                            st.dataframe(
+                                pd.DataFrame(st.session_state.processed_records),
+                                use_container_width=True,
+                            )
+                        else:
+                            st.info("No new, valid records found.")
 
         elif active_tab == "dashboard":
             if df.empty:
@@ -651,6 +638,7 @@ def main():
                 with st.container():
                     st.info("No records to manage.")
             else:
+
                 with st.container():
                     st.subheader("Delete Individual Records")
                     refs_to_delete = st.multiselect(

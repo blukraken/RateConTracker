@@ -407,8 +407,7 @@ def render_data_table(df):
 
 
 # --- Callback Functions ---
-def run_file_processing():
-    uploaded_files = st.session_state.get('file_uploader', [])
+def run_file_processing(uploaded_files):
     if not uploaded_files:
         st.warning("Please upload files before processing.")
         return
@@ -558,6 +557,7 @@ def main():
             st.button(
                 "⚙️ Process Files",
                 on_click=run_file_processing,
+                args=(uploaded_files,),
                 disabled=st.session_state.processing_complete or not uploaded_files,
                 use_container_width=True,
                 type="primary"

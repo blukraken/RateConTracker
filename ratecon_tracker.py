@@ -11,7 +11,6 @@ import gspread
 from gspread_dataframe import set_with_dataframe
 
 # --- Logging Configuration ---
-# This is a test change.
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -46,18 +45,15 @@ st.set_page_config(
 )
 
 # --- Minimal, Safe Custom Styling ---
-# This CSS is for layout and won't interfere with Streamlit's themes.
 st.markdown(
     """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
-    /* Using Streamlit's theme variables for compatibility */
     .main { 
         font-family: 'Inter', sans-serif; 
     }
     
-    /* Custom "Card" Container Styling for layout */
     [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
         border: 1px solid var(--p-color-gray-20);
         border-radius: 12px;
@@ -201,16 +197,21 @@ def process_dataframe(df):
     return df_proc
 
 
+# --- FEATURE CHANGE: Modified functions to include Chassis Count ---
 @st.cache_data
 def convert_df_to_csv(df):
-    return df.to_csv(index=False).encode("utf-8")
+    # Process the dataframe to ensure Chassis Count is present
+    df_to_export = process_dataframe(df)
+    return df_to_export.to_csv(index=False).encode("utf-8")
 
 
 @st.cache_data
 def convert_df_to_excel(df):
+    # Process the dataframe to ensure Chassis Count is present
+    df_to_export = process_dataframe(df)
     output = BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        df.to_excel(writer, index=False, sheet_name="RateCons")
+        df_to_export.to_excel(writer, index=False, sheet_name="RateCons")
     return output.getvalue()
 
 
@@ -265,7 +266,6 @@ def render_charts(df):
         return
     df_proc = process_dataframe(df)
 
-    # Get the current theme for plotly
     plotly_template = (
         "plotly_dark" if st.get_option("theme.base") == "dark" else "plotly_white"
     )
@@ -297,7 +297,6 @@ def render_data_table(df):
     if df.empty:
         return
     df_proc = process_dataframe(df)
-    # Add a visual indicator for mismatches that works in light and dark mode
     df_proc["Notes"] = df_proc.apply(
         lambda row: "⚠️ Rate Mismatch" if row["Mismatch"] else row["Notes"], axis=1
     )
@@ -420,7 +419,6 @@ def set_active_tab(tab_id):
 def main():
     st.title("RateCon Tracker")
 
-    # Initialize session state variables
     for key in [
         "processing_complete",
         "processed_records",
@@ -438,7 +436,6 @@ def main():
 
     active_tab = st.query_params.get("tab", "upload")
 
-    # --- Tab Navigation ---
     tabs = {
         "upload": "📁 Upload",
         "dashboard": "📊 Dashboard",
@@ -457,7 +454,6 @@ def main():
 
     df = load_log()
 
-    # --- Main Content Area ---
     if active_tab == "upload":
         with st.container():
             st.header("Upload RateCon PDFs")
@@ -530,6 +526,7 @@ def main():
                     file_name_base = (
                         f"ratecon_export_{datetime.now().strftime('%Y%m%d')}"
                     )
+                    # --- FEATURE CHANGE: Pass the main dataframe `df` to the conversion functions ---
                     if export_format == "Excel":
                         label, data, mime, ext = (
                             "📥 Export to Excel",

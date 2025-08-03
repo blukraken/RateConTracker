@@ -4,3 +4,4 @@ pdfplumber
 plotly
 gspread
 gspread-dataframe
+xlsxwriter
